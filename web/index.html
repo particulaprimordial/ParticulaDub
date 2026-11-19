@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Particula Dub</title>
+<style>
+:root{--bg:#eef0f3;--card:#fff;--ink:#14181f;--mut:#5b6572;--acc:#0a8f7a;--acc2:#c47a0a;--line:#d6dbe2;--wk:#fff;--bk:#1b2028;--on:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0e13;--card:#131820;--ink:#e6ebf2;--mut:#8b96a5;--acc:#2de2c0;--acc2:#ffb347;--line:#252d38;--wk:#dfe5ee;--bk:#05070a;--on:#04110e}}
+:root[data-theme="dark"]{--bg:#0b0e13;--card:#131820;--ink:#e6ebf2;--mut:#8b96a5;--acc:#2de2c0;--acc2:#ffb347;--line:#252d38;--wk:#dfe5ee;--bk:#05070a;--on:#04110e}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:780px;margin:0 auto;padding:16px 14px 40px}
+h1{margin:0;font-size:26px;letter-spacing:.5px}
+h1 span{color:var(--acc)}
+.sub{color:var(--mut);margin:2px 0 12px;font-size:13px}
+canvas{width:100%;height:96px;display:block;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px}
+.card h2{margin:0 0 8px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.btn{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
+.btn.on{background:var(--acc);border-color:var(--acc);color:var(--on);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:2px 18px}
+.sl{padding:4px 0}
+.sl div{display:flex;justify-content:space-between;font-size:13px}
+.sl output{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--acc2)}
+input[type=range]{width:100%;height:28px;margin:0;accent-color:var(--acc)}
+.kb{position:relative;height:132px;margin-top:8px;user-select:none;-webkit-user-select:none;touch-action:none}
+.k{position:absolute;top:0;height:100%;background:var(--wk);border:1px solid var(--line);border-radius:0 0 6px 6px;box-sizing:border-box;display:flex;align-items:flex-end;justify-content:center;font-size:11px;color:var(--mut);padding-bottom:4px}
+.k.b{height:62%;background:var(--bk);z-index:2;border-radius:0 0 4px 4px}
+.k.down{background:var(--acc)}
+.foot{color:var(--mut);font-size:12px;margin-top:16px}
+</style></head><body><div class="wrap">
+<h1>Particula <span>Dub</span></h1>
+<div class="sub">Sintetizador de acordes para dub techno · versión web del motor DSP del VST3</div>
+<canvas id="vis"></canvas>
+
+<div class="card"><h2>Presets</h2><div class="row" id="presets"></div></div>
+<div class="card"><h2>Acorde</h2><div class="row" id="chord"></div></div>
+<div class="card"><h2>Demo</h2><div class="row"><button class="btn" id="loop">▶ Loop dub techno</button></div>
+<div class="sl"><div><span>Tempo</span><output id="o_bpm"></output></div><input type="range" id="s_bpm" min="0" max="1000"></div></div>
+<div id="groups"></div>
+<div class="card"><h2>Teclado</h2>
+<div class="row"><button class="btn" id="octm">−</button><span id="octl" style="min-width:64px;text-align:center"></span><button class="btn" id="octp">+</button>
+<span class="sub" style="margin:0 0 0 8px">También con las teclas A–K del ordenador</span></div>
+<div class="kb" id="kb"></div></div>
+<div class="foot">Demo educativa: el plugin real (JUCE/C++) usa otros bloques de DSP; aquí se usa Web Audio. Toca una tecla para activar el audio.</div>
+</div>
+<script>
+const DEF={chord:1,detune:12,cutoff:700,res:1.2,envamt:2.5,fdec:.35,atk:.005,dec:.6,sus:0,rel:.5,dtime:2,dfb:.65,dtone:2200,dmix:.45,rsize:.8,rmix:.3,gain:0,bpm:124};
+const P=Object.assign({},DEF);
+const PRE={"Classic stab":{},"Deep chord":{chord:2,cutoff:450,envamt:2,fdec:.5,dec:.9,dtime:3,dfb:.72,dtone:1800,dmix:.5,rsize:.9,rmix:.38},
+"Long echo":{cutoff:900,envamt:3,fdec:.25,dec:.4,dtime:4,dfb:.85,dtone:1500,dmix:.6,rsize:.7,rmix:.25},
+"Dark pad":{chord:3,atk:.4,dec:1.5,sus:.5,rel:2,cutoff:380,envamt:1.2,fdec:1.5,res:1,dfb:.6,rsize:1,rmix:.5}};
+const CH=[[0],[0,3,7,10],[0,3,10,14],[0,3,7,10,17],[0,5,7,10]];
+const CHN=["Off","m7","m9","m11","sus m7"],DTN=["1/16","1/8","1/8.","1/4","1/4."],BE=[.25,.5,.75,1,1.5];
+// id,label,min,max,log,unit,decimals
+const GR=[["Oscilador y filtro",[["detune","Detune",0,40,0,"ct",1],["cutoff","Cutoff",60,12000,1,"Hz",0],["res","Resonancia",.5,6,0,"",2],["envamt","Env. filtro",0,6,0,"oct",1],["fdec","Decay filtro",.02,2,1,"s",2]]],
+["Envolvente",[["atk","Attack",.001,2,1,"s",3],["dec","Decay",.02,3,1,"s",2],["sus","Sustain",0,1,0,"",2],["rel","Release",.02,4,1,"s",2]]],
+["Dub delay",[["dfb","Feedback",0,.95,0,"",2],["dtone","Tono",400,9000,1,"Hz",0],["dmix","Mezcla",0,1,0,"",2]]],
+["Reverb y salida",[["rsize","Tamaño",0,1,0,"",2],["rmix","Mezcla",0,1,0,"",2],["gain","Salida",-24,6,0,"dB",1]]]];
+const SPEC={bpm:["Tempo",60,160,0,"BPM",0]};
+GR.forEach(g=>g[1].forEach(s=>SPEC[s[0]]=[s[1],s[2],s[3],s[4],s[5],s[6]]));
+const toV=(id,x)=>{const[,a,b,lg]=SPEC[id];x/=1000;return lg?a*Math.pow(b/a,x):a+(b-a)*x};
+const toX=(id,v)=>{const[,a,b,lg]=SPEC[id];return 1000*(lg?Math.log(v/a)/Math.log(b/a):(v-a)/(b-a))};
+const $=id=>document.getElementById(id);
+let ctx,master,synth,an,dwet,rv,rvWet,dl=[],fbG=[],lps=[],irT,BASE=48,loopOn=!1,nextT=0,step=0;
+
+function mkSlider(id,host){const s=SPEC[id],d=document.createElement("div");d.className="sl";
+ d.innerHTML='<div><span>'+s[0]+'</span><output id="o_'+id+'"></output></div><input type="range" id="s_'+id+'" min="0" max="1000">';
+ host.appendChild(d);$("s_"+id).addEventListener("input",e=>{P[id]=toV(id,+e.target.value);show(id);apply(id)})}
+function show(id){const s=SPEC[id];$("o_"+id).textContent=P[id].toFixed(s[5])+(s[4]?" "+s[4]:"")}
+function seg(host,labels,key){labels.forEach((t,i)=>{const b=document.createElement("button");b.className="btn";b.textContent=t;b.onclick=()=>{P[key]=i;sync();apply(key)};host.appendChild(b)})}
+function sync(){for(const id in SPEC){$("s_"+id).value=toX(id,P[id]);show(id)}
+ [...$("chord").children].forEach((b,i)=>b.classList.toggle("on",i===P.chord));
+ [...$("dtime").children].forEach((b,i)=>b.classList.toggle("on",i===P.dtime))}
+const grp=$("groups");
+GR.forEach(g=>{const c=document.createElement("div");c.className="card";c.innerHTML="<h2>"+g[0]+"</h2>";
+ if(g[0]==="Dub delay"){const r=document.createElement("div");r.className="row";r.id="dtime";seg(r,DTN,"dtime");c.appendChild(r)}
+ const gd=document.createElement("div");gd.className="grid";g[1].forEach(s=>mkSlider(s[0],gd));c.appendChild(gd);grp.appendChild(c)});
+$("s_bpm").addEventListener("input",e=>{P.bpm=toV("bpm",+e.target.value);show("bpm");apply("bpm")});
+seg($("chord"),CHN,"chord");
+Object.keys(PRE).forEach(n=>{const b=document.createElement("button");b.className="btn";b.textContent=n;
+ b.onclick=()=>{ensure();Object.assign(P,DEF,PRE[n]);sync();for(const id in P)apply(id)};$("presets").appendChild(b)});
+sync();
+
+// ---------- audio ----------
+function ensure(){if(!ctx)init();if(ctx.state!=="running")ctx.resume()}
+function makeIR(size){const sr=ctx.sampleRate,len=Math.floor(sr*(.5+size*3.5)),b=ctx.createBuffer(2,len,sr);
+ for(let c=0;c<2;c++){const d=b.getChannelData(c);let y=0;for(let i=0;i<len;i++){y+=.3*((Math.random()*2-1)-y);d[i]=y*Math.pow(1-i/len,3)}}return b}
+function init(){
+ ctx=new(window.AudioContext||window.webkitAudioContext)();
+ synth=ctx.createGain();const fx=ctx.createGain();master=ctx.createGain();an=ctx.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=.82;
+ const curve=new Float32Array(2048);for(let i=0;i<2048;i++)curve[i]=Math.tanh(i/1023.5-1);
+ const mg=ctx.createChannelMerger(2);dwet=ctx.createGain();
+ for(let c=0;c<2;c++){const inG=ctx.createGain(),sh=ctx.createWaveShaper(),d=ctx.createDelay(3),lp=ctx.createBiquadFilter(),fb=ctx.createGain();
+  sh.curve=curve;lp.type="lowpass";lp.Q.value=-3.01;
+  synth.connect(inG);inG.connect(sh);sh.connect(d);d.connect(mg,0,c);d.connect(lp);lp.connect(fb);fb.connect(inG);
+  dl.push(d);lps.push(lp);fbG.push(fb)}
+ mg.connect(dwet);dwet.connect(fx);synth.connect(fx);
+ rv=ctx.createConvolver();rvWet=ctx.createGain();rv.buffer=makeIR(P.rsize);
+ fx.connect(master);fx.connect(rv);rv.connect(rvWet);rvWet.connect(master);
+ master.connect(an);master.connect(ctx.destination);
+ for(const id in P)apply(id)}
+function apply(id){if(!ctx)return;const t=ctx.currentTime;
+ if(id==="dtime"||id==="bpm"){const T=Math.min(2.9,BE[P.dtime]*60/P.bpm);dl[0].delayTime.setTargetAtTime(T,t,.08);dl[1].delayTime.setTargetAtTime(T*.75,t,.08)}
+ if(id==="dfb")fbG.forEach(g=>g.gain.setTargetAtTime(P.dfb,t,.03));
+ if(id==="dtone")lps.forEach(l=>l.frequency.setTargetAtTime(P.dtone,t,.03));
+ if(id==="dmix")dwet.gain.setTargetAtTime(P.dmix,t,.03);
+ if(id==="rmix")rvWet.gain.setTargetAtTime(P.rmix,t,.03);
+ if(id==="rsize"){clearTimeout(irT);irT=setTimeout(()=>{rv.buffer=makeIR(P.rsize)},180)}
+ if(id==="gain")master.gain.setTargetAtTime(Math.pow(10,P.gain/20),t,.03)}
+
+function voice(m,vel,t){
+ const f=440*Math.pow(2,(m-69)/12),lvl=vel*.16;
+ const o1=ctx.createOscillator(),o2=ctx.createOscillator(),mix=ctx.createGain(),flt=ctx.createBiquadFilter(),g=ctx.createGain(),relG=ctx.createGain();
+ o1.type=o2.type="sawtooth";o1.frequency.value=o2.frequency.value=f;o2.detune.value=P.detune;mix.gain.value=.5;
+ flt.type="lowpass";flt.Q.value=20*Math.log10(P.res);
+ const pk=Math.min(18000,P.cutoff*Math.pow(2,P.envamt));
+ flt.frequency.setValueAtTime(P.cutoff,t);flt.frequency.linearRampToValueAtTime(pk,t+.003);flt.frequency.exponentialRampToValueAtTime(P.cutoff,t+.003+P.fdec);
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(lvl,t+P.atk);g.gain.linearRampToValueAtTime(P.sus*lvl,t+P.atk+P.dec);
+ o1.connect(mix);o2.connect(mix);mix.connect(flt);flt.connect(g);g.connect(relG);relG.connect(synth);
+ o1.start(t);o2.start(t);o1.onended=()=>relG.disconnect();
+ const rel=P.rel;
+ return{rel(t2){relG.gain.setTargetAtTime(0,t2,rel/3);const e=t2+rel*1.7+.1;o1.stop(e);o2.stop(e)}}}
+function trig(m,vel,t){return CH[P.chord].filter(i=>m+i<=127).map(i=>voice(m+i,vel,t))}
+function kick(t){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(42,t+.12);
+ g.gain.setValueAtTime(.8,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);o.connect(g);g.connect(master);o.start(t);o.stop(t+.32)}
+
+// ---------- demo loop ----------
+const PAT={2:50,6:50,10:50,14:53};
+$("loop").onclick=()=>{ensure();loopOn=!loopOn;$("loop").classList.toggle("on",loopOn);$("loop").textContent=loopOn?"■ Detener":"▶ Loop dub techno";nextT=ctx.currentTime+.08;step=0};
+setInterval(()=>{if(!loopOn||!ctx)return;const sp=60/P.bpm/4;
+ while(nextT<ctx.currentTime+.12){const s=step%16;if(s%4===0)kick(nextT);
+  if(PAT[s]!==undefined){const vs=trig(PAT[s],.9,nextT);vs.forEach(v=>v.rel(nextT+sp*1.5))}
+  nextT+=sp;step++}},25);
+
+// ---------- keyboard ----------
+const kb=$("kb");let kEls=[];const held=new Map();
+function build(){kb.innerHTML="";kEls=[];let wi=0;const W=100/15;$("octl").textContent="C"+(BASE/12-1)+"–C"+(BASE/12+1);
+ for(let i=0;i<25;i++){const bl=[1,3,6,8,10].includes(i%12),el=document.createElement("div");el.dataset.i=i;
+  if(bl){el.className="k b";el.style.left=(wi*W-W*.3)+"%";el.style.width=(W*.6)+"%"}
+  else{el.className="k";el.style.left=(wi*W)+"%";el.style.width=W+"%";if(i%12===0)el.textContent="C"+(BASE/12-1+i/12);wi++}
+  kb.appendChild(el);kEls[i]=el}}
+function press(i,id){const el=kEls[i];if(!el||held.has(id))return;held.set(id,{vs:trig(BASE+i,.9,ctx.currentTime+.005),el});el.classList.add("down")}
+function release(id){const h=held.get(id);if(!h)return;h.vs.forEach(v=>v.rel(ctx.currentTime));h.el.classList.remove("down");held.delete(id)}
+kb.addEventListener("pointerdown",e=>{const el=e.target.closest(".k");if(!el)return;ensure();press(+el.dataset.i,"p"+e.pointerId);e.preventDefault()});
+addEventListener("pointerup",e=>release("p"+e.pointerId));addEventListener("pointercancel",e=>release("p"+e.pointerId));
+const KM={a:0,w:1,s:2,e:3,d:4,f:5,t:6,g:7,y:8,h:9,u:10,j:11,k:12};
+addEventListener("keydown",e=>{if(e.repeat||e.metaKey||e.ctrlKey||e.altKey)return;const k=e.key.toLowerCase();if(KM[k]===undefined)return;ensure();press(KM[k]+12,"k"+k)});
+addEventListener("keyup",e=>release("k"+e.key.toLowerCase()));
+$("octm").onclick=()=>{if(BASE>24){BASE-=12;build()}};$("octp").onclick=()=>{if(BASE<72){BASE+=12;build()}};
+build();
+
+// ---------- visual ----------
+const cv=$("vis"),c2=cv.getContext("2d");
+function draw(){requestAnimationFrame(draw);const r=cv.getBoundingClientRect(),dpr=devicePixelRatio||1;
+ if(cv.width!==Math.round(r.width*dpr)){cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr)}
+ const w=cv.width,h=cv.height,cs=getComputedStyle(document.documentElement);
+ c2.clearRect(0,0,w,h);const n=56,bw=w/n;let d=null;
+ if(an){d=new Uint8Array(an.frequencyBinCount);an.getByteFrequencyData(d)}
+ const gr=c2.createLinearGradient(0,h,0,0);gr.addColorStop(0,cs.getPropertyValue("--acc").trim());gr.addColorStop(1,cs.getPropertyValue("--acc2").trim());c2.fillStyle=gr;
+ for(let i=0;i<n;i++){const v=d?d[Math.min(63,Math.floor(Math.pow(i/n,1.5)*64))]/255:0,bh=Math.max(2*dpr,v*h*.95);c2.fillRect(i*bw+1,h-bh,bw-2,bh)}}
+draw();
+</script></body></html>

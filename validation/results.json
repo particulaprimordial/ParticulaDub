@@ -1,0 +1,157 @@
+{
+  "aliasing_inharmonic_db": {
+    "220.0": {
+      "naive_db": -22.2,
+      "polyblep_db": -38.3
+    },
+    "880.0": {
+      "naive_db": -16.1,
+      "polyblep_db": -32.5
+    },
+    "1760.0": {
+      "naive_db": -12.9,
+      "polyblep_db": -28.7
+    }
+  },
+  "detune_beating": {
+    "110.0": {
+      "predicted_hz": 0.765,
+      "measured_hz": 0.765
+    },
+    "146.83": {
+      "predicted_hz": 1.021,
+      "measured_hz": 1.021
+    },
+    "220.0": {
+      "predicted_hz": 1.53,
+      "measured_hz": 1.53
+    }
+  },
+  "dub_delay": {
+    "delay_s": 0.375,
+    "feedback": 0.65,
+    "tone_hz": 2200.0,
+    "one_pole_c": 0.2691,
+    "area_ratio_predicted": 0.65,
+    "area_ratio_measured": [
+      0.65,
+      0.65,
+      0.65,
+      0.65,
+      0.65,
+      0.65
+    ],
+    "hf_ratio_at_tone_predicted": 0.4615,
+    "hf_ratio_at_tone_measured": [
+      0.4615,
+      0.4615,
+      0.4615,
+      0.4615
+    ],
+    "per_repeat_db_at_tone_predicted": -6.72,
+    "echoes_to_minus60db_predicted": 17.04,
+    "echo_index_first_below_minus60db_measured": 18,
+    "stability_fb095_fullscale_max_abs": 0.7616,
+    "stability_fb095_peak_last_5s": 0.0004
+  },
+  "filter": {
+    "resonance_gain_at_fc": {
+      "0.707": {
+        "measured_gain": 0.707,
+        "measured_db": -3.01,
+        "predicted_db": -3.01
+      },
+      "1.2": {
+        "measured_gain": 1.2,
+        "measured_db": 1.58,
+        "predicted_db": 1.58
+      },
+      "3.0": {
+        "measured_gain": 3.0,
+        "measured_db": 9.54,
+        "predicted_db": 9.54
+      },
+      "6.0": {
+        "measured_gain": 6.0,
+        "measured_db": 15.56,
+        "predicted_db": 15.56
+      }
+    },
+    "env_peak_hz": 3959.8,
+    "env_sweep_rate_oct_per_s": 7.14,
+    "env_time_to_pass_1khz_s": 0.278
+  },
+  "chords_D3": {
+    "Off": {
+      "intervals": [
+        0
+      ],
+      "freqs_hz": [
+        146.83
+      ],
+      "interaction_roughness": 0.0
+    },
+    "m7": {
+      "intervals": [
+        0,
+        3,
+        7,
+        10
+      ],
+      "freqs_hz": [
+        146.83,
+        174.61,
+        220.0,
+        261.63
+      ],
+      "interaction_roughness": 0.978
+    },
+    "m9": {
+      "intervals": [
+        0,
+        3,
+        10,
+        14
+      ],
+      "freqs_hz": [
+        146.83,
+        174.61,
+        261.63,
+        329.63
+      ],
+      "interaction_roughness": 0.872
+    },
+    "m11": {
+      "intervals": [
+        0,
+        3,
+        7,
+        10,
+        17
+      ],
+      "freqs_hz": [
+        146.83,
+        174.61,
+        220.0,
+        261.63,
+        392.0
+      ],
+      "interaction_roughness": 1.326
+    },
+    "sus m7": {
+      "intervals": [
+        0,
+        5,
+        7,
+        10
+      ],
+      "freqs_hz": [
+        146.83,
+        196.0,
+        220.0,
+        261.63
+      ],
+      "interaction_roughness": 1.007
+    }
+  }
+}
